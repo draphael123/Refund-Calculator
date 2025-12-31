@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medication Payment Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="calculator-card">
+            <h1>Medication Payment Calculator</h1>
+            <p class="subtitle">Calculate your medication costs and payment breakdown</p>
+            
+            <form id="calculatorForm">
+                <div class="input-group">
+                    <label for="amountPaid">Amount Paid ($)</label>
+                    <input 
+                        type="number" 
+                        id="amountPaid" 
+                        name="amountPaid" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="Enter amount paid"
+                        required
+                    >
+                </div>
+                
+                <div class="input-group">
+                    <label for="medicationDispensed">Amount of Medication Dispensed</label>
+                    <input 
+                        type="number" 
+                        id="medicationDispensed" 
+                        name="medicationDispensed" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="Enter medication amount"
+                        required
+                    >
+                </div>
+                
+                <div class="input-group">
+                    <label for="weeksPaid">Number of Weeks Paid</label>
+                    <input 
+                        type="number" 
+                        id="weeksPaid" 
+                        name="weeksPaid" 
+                        step="0.1" 
+                        min="0" 
+                        placeholder="Enter number of weeks"
+                        required
+                    >
+                </div>
+                
+                <div class="input-group">
+                    <label for="weeksReceived">Number of Weeks Actually Received</label>
+                    <input 
+                        type="number" 
+                        id="weeksReceived" 
+                        name="weeksReceived" 
+                        step="0.1" 
+                        min="0" 
+                        placeholder="Enter weeks of medication received"
+                        required
+                    >
+                </div>
+                
+                <button type="submit" class="calculate-btn">Calculate</button>
+            </form>
+            
+            <div id="results" class="results hidden">
+                <h2>Calculation Results</h2>
+                <div class="result-item">
+                    <span class="result-label">Cost per Week:</span>
+                    <span class="result-value" id="costPerWeek">$0.00</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Cost per Unit of Medication:</span>
+                    <span class="result-value" id="costPerUnit">$0.00</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Medication per Week:</span>
+                    <span class="result-value" id="medicationPerWeek">0.00</span>
+                </div>
+                <div class="result-item highlight">
+                    <span class="result-label">Total Weekly Cost per Unit:</span>
+                    <span class="result-value" id="weeklyCostPerUnit">$0.00</span>
+                </div>
+                <div class="result-item refund">
+                    <span class="result-label">Refund Amount:</span>
+                    <span class="result-value" id="refundAmount">$0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
+
