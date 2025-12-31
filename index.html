@@ -101,6 +101,24 @@
                     <span class="validation-icon"></span>
                 </div>
                 
+                <div class="input-group">
+                    <label for="weeksReceived">
+                        Number of Weeks Received
+                        <span class="tooltip-icon" data-tooltip="Enter the number of weeks of medication actually received. If full amount received, enter same as weeks paid.">ℹ️</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="weeksReceived" 
+                        name="weeksReceived" 
+                        placeholder="Enter weeks received (e.g., 4 weeks or 4)"
+                        required
+                        aria-describedby="weeksReceived-error"
+                        aria-invalid="false"
+                    >
+                    <span class="error-message" id="weeksReceived-error" role="alert"></span>
+                    <span class="validation-icon"></span>
+                </div>
+                
                 <div class="medications-section">
                     <div class="section-header">
                         <label>
@@ -175,6 +193,10 @@
                 </div>
                 
                 <div class="results-content">
+                    <div class="result-item refund-summary-item" id="mainRefundItem" style="display: none;">
+                        <span class="result-label">Refund Amount:</span>
+                        <span class="result-value" id="mainRefundAmount">$0.00</span>
+                    </div>
                     <div class="result-item">
                         <span class="result-label">Cost per Week:</span>
                         <span class="result-value" id="costPerWeek">$0.00</span>

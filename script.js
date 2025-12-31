@@ -197,6 +197,12 @@ function validateInput(input) {
             isValid = false;
             errorMessage = 'Please enter a valid number of weeks (e.g., 4 weeks or 4)';
         }
+    } else if (input.id === 'weeksReceived') {
+        const value = extractNumber(input.value);
+        if (isNaN(value) || value < 0) {
+            isValid = false;
+            errorMessage = 'Please enter a valid number of weeks (e.g., 4 weeks or 4)';
+        }
     }
     
     if (isValid) {
@@ -278,10 +284,12 @@ function performCalculation() {
     const medicationDispensedText = document.getElementById('medicationDispensed').value;
     const medicationUnit = document.getElementById('medicationUnit').value;
     const weeksPaidText = document.getElementById('weeksPaid').value;
+    const weeksReceivedText = document.getElementById('weeksReceived').value;
     
     // Extract and convert numeric values
     let medicationDispensed = extractNumber(medicationDispensedText);
     const weeksPaid = extractNumber(weeksPaidText);
+    const weeksReceived = extractNumber(weeksReceivedText) || 0;
     
     // Unit conversion if needed
     if (medicationUnit) {
@@ -293,6 +301,12 @@ function performCalculation() {
     const costPerUnit = amountPaid / medicationDispensed;
     const medicationPerWeek = medicationDispensed / weeksPaid;
     const weeklyCostPerUnit = costPerWeek / medicationPerWeek;
+    
+    // Calculate refund: (Weeks Paid - Weeks Received) × Cost per Week
+    // If weeks received >= weeks paid, refund is $0 (full medication received)
+    const refund = weeksReceived < weeksPaid 
+        ? (weeksPaid - weeksReceived) * costPerWeek 
+        : 0;
     
     // Projections
     const costOneMonth = costPerWeek * 4;
@@ -308,9 +322,11 @@ function performCalculation() {
             amountPaid,
             medicationDispensed,
             medicationUnit: medicationUnit || 'auto',
-            weeksPaid
+            weeksPaid,
+            weeksReceived
         },
         results: {
+            refund,
             costPerWeek,
             costPerUnit,
             medicationPerWeek,
@@ -343,6 +359,18 @@ function performCalculation() {
 }
 
 function displayResults(results) {
+    // Display main refund amount at the top
+    const mainRefundItem = document.getElementById('mainRefundItem');
+    const mainRefundAmount = document.getElementById('mainRefundAmount');
+    
+    if (mainRefundAmount) {
+        mainRefundAmount.textContent = formatCurrency(results.refund || 0);
+    }
+    if (mainRefundItem) {
+        mainRefundItem.style.display = 'flex';
+    }
+    
+    // Display other results
     document.getElementById('costPerWeek').textContent = formatCurrency(results.costPerWeek);
     document.getElementById('costPerUnit').textContent = formatCurrency(results.costPerUnit);
     document.getElementById('medicationPerWeek').textContent = formatNumber(results.medicationPerWeek);
@@ -357,9 +385,12 @@ function displayResults(results) {
     const totalRefundItem = document.getElementById('totalRefundItem');
     const totalIntendedRefund = document.getElementById('totalIntendedRefund');
     
+    // Combine main refund with medication refunds for total
+    const combinedRefund = (results.refund || 0) + totalRefund;
+    
     if (totalRefund > 0 && state.selectedMedications.length > 0) {
         if (totalIntendedRefund) {
-            totalIntendedRefund.textContent = formatCurrency(totalRefund);
+            totalIntendedRefund.textContent = formatCurrency(combinedRefund);
         }
         if (totalRefundItem) {
             totalRefundItem.style.display = 'flex';
@@ -385,6 +416,7 @@ function clearForm() {
     document.getElementById('results').classList.add('hidden');
     document.getElementById('calculationHistory').classList.add('hidden');
     document.getElementById('refundSummary').style.display = 'none';
+    document.getElementById('mainRefundItem').style.display = 'none';
     
     // Clear validation states
     document.querySelectorAll('.input-group').forEach(group => {
@@ -739,8 +771,10 @@ Inputs:
 - Amount Paid: ${formatCurrency(state.currentCalculation.inputs.amountPaid)}
 - Medication Dispensed: ${state.currentCalculation.inputs.medicationDispensed}${state.currentCalculation.inputs.medicationUnit !== 'auto' ? state.currentCalculation.inputs.medicationUnit : ''}
 - Weeks Paid: ${state.currentCalculation.inputs.weeksPaid}
+- Weeks Received: ${state.currentCalculation.inputs.weeksReceived || 0}
 
 Results:
+- Refund Amount: ${formatCurrency(results.refund || 0)}
 - Cost per Week: ${formatCurrency(results.costPerWeek)}
 - Cost per Unit: ${formatCurrency(results.costPerUnit)}
 - Medication per Week: ${formatNumber(results.medicationPerWeek)}
@@ -871,6 +905,9 @@ function loadFromHistory(calculation) {
     document.getElementById('medicationDispensed').value = calculation.inputs.medicationDispensed;
     document.getElementById('medicationUnit').value = calculation.inputs.medicationUnit;
     document.getElementById('weeksPaid').value = calculation.inputs.weeksPaid;
+    if (calculation.inputs.weeksReceived !== undefined) {
+        document.getElementById('weeksReceived').value = calculation.inputs.weeksReceived;
+    }
     
     // Validate and display
     document.querySelectorAll('input[required]').forEach(input => validateInput(input));
@@ -903,6 +940,10 @@ function updateURL(calculation) {
         weeks: calculation.inputs.weeksPaid
     });
     
+    if (calculation.inputs.weeksReceived) {
+        params.set('weeksReceived', calculation.inputs.weeksReceived);
+    }
+    
     window.history.pushState({}, '', `?${params.toString()}`);
 }
 
@@ -913,6 +954,9 @@ function loadFromURL() {
         document.getElementById('medicationDispensed').value = params.get('medication');
         document.getElementById('medicationUnit').value = params.get('unit') || '';
         document.getElementById('weeksPaid').value = params.get('weeks');
+        if (params.has('weeksReceived')) {
+            document.getElementById('weeksReceived').value = params.get('weeksReceived');
+        }
         
         // Auto-calculate if all fields are filled
         setTimeout(() => {
