@@ -1,11 +1,48 @@
-// Medication data structure (can be populated from spreadsheet)
-// Format: { id, name, amountPaid, medicationDispensed, weeksPaid, weeksReceived, unit }
+// Medication data structure from spreadsheet
+// Format: { id, name, amountPaid (Total COGS 84-Day), medicationDispensed, weeksPaid (12 for 84-day), weeksReceived, unit, pharmacy }
 let medicationsData = [
-    // Sample data - replace with actual spreadsheet data
-    { id: 1, name: "Medication A", amountPaid: 100, medicationDispensed: 50, weeksPaid: 4, weeksReceived: 3, unit: "mg" },
-    { id: 2, name: "Medication B", amountPaid: 150, medicationDispensed: 75, weeksPaid: 6, weeksReceived: 4, unit: "ml" },
-    { id: 3, name: "Medication C", amountPaid: 200, medicationDispensed: 100, weeksPaid: 8, weeksReceived: 6, unit: "units" },
-    // Add more medications from spreadsheet here
+    // Section 1: Treatments/Medications
+    { id: 1, name: "TRT - T CYPIONATE", amountPaid: 72.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Various" },
+    { id: 2, name: "TRT - T CREAM", amountPaid: 80.61, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 3, name: "TRT - ENCLOMIPHENE", amountPaid: 108.20, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "TPH" },
+    { id: 4, name: "HRT - TESTOSTERONE/ESTROGEN", amountPaid: 42.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 5, name: "HRT - TESTOSTERONE", amountPaid: 42.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 6, name: "HRT - PROGESTERONE", amountPaid: 62.40, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 7, name: "ED - TADALAFIL", amountPaid: 33.80, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 8, name: "THYROID", amountPaid: 75.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 9, name: "HAIR - MINOXIDIL", amountPaid: 35.31, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 10, name: "HAIR - FINASTERIDE", amountPaid: 38.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 11, name: "HAIR - DUTASTERIDE", amountPaid: 36.81, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 12, name: "ANASTROZOLE", amountPaid: 32.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 13, name: "HCG", amountPaid: 240.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Curexa" },
+    { id: 14, name: "HCG x2", amountPaid: 468.00, medicationDispensed: 2, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Curexa" },
+    { id: 15, name: "ENC (ADD-ON) - ENCLOMIPHENE", amountPaid: 45.20, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "TPH" },
+    { id: 16, name: "GLP - SEMAGLUTIDE", amountPaid: 476.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "TPH" },
+    { id: 17, name: "GLP - TIRZEPATIDE", amountPaid: 1133.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "TPH" },
+    
+    // Section 2: Detailed Medications
+    { id: 18, name: "Tadalafil", amountPaid: 33.80, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 19, name: "Sildenafil", amountPaid: 38.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 20, name: "Minoxidil 6%/Dutasteride 0.1%/Ketoconazole 1.7% Hair Loss Solution", amountPaid: 56.81, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 21, name: "HCG (Curexa)", amountPaid: 380.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Curexa" },
+    { id: 22, name: "Enclomiphene 12.5/25mg daily", amountPaid: 108.20, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "TPH" },
+    { id: 23, name: "Enclomiphene 25mg biw", amountPaid: 45.20, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "TPH" },
+    { id: 24, name: "Testosterone Cypionate 2.5mL/5mL EMP", amountPaid: 72.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "EMP" },
+    { id: 25, name: "Testosterone Cypionate 10mL", amountPaid: 55.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Curexa" },
+    { id: 26, name: "Testosterone Cream 200mg/mL", amountPaid: 80.61, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 27, name: "Testosterone Cream FEMALE", amountPaid: 42.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 28, name: "T/E2 Cream FEMALE", amountPaid: 42.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 29, name: "Progesterone", amountPaid: 62.40, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 30, name: "Semaglutide TPH", amountPaid: 476.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "TPH" },
+    { id: 31, name: "Semaglutide Absolute", amountPaid: 537.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Absolute" },
+    { id: 32, name: "Tirzepatide Red Rock", amountPaid: 1125.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "Red Rock" },
+    { id: 33, name: "Tirzepatide TPH", amountPaid: 1133.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "vial", pharmacy: "TPH" },
+    { id: 34, name: "Anastrazole", amountPaid: 32.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 35, name: "Spironolactone", amountPaid: 31.76, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 36, name: "Estriol Face Cream", amountPaid: 42.16, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 37, name: "Blush Cream", amountPaid: 35.56, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Curexa" },
+    { id: 38, name: "Dessicated Thyroid", amountPaid: 75.00, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" },
+    { id: 39, name: "Progesterone Troche", amountPaid: 163.20, medicationDispensed: 1, weeksPaid: 12, weeksReceived: 0, unit: "bottle", pharmacy: "Belmar WI" }
 ];
 
 // Load medications from localStorage if available
@@ -373,11 +410,12 @@ function populateMedicationDropdowns() {
             dropdown.remove(1);
         }
         
-        // Add medications from data
-        medicationsData.forEach(med => {
+        // Add medications from data, sorted by name
+        const sortedMeds = [...medicationsData].sort((a, b) => a.name.localeCompare(b.name));
+        sortedMeds.forEach(med => {
             const option = document.createElement('option');
             option.value = med.id;
-            option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}`;
+            option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}${med.pharmacy ? ` (${med.pharmacy})` : ''}`;
             option.dataset.medication = JSON.stringify(med);
             dropdown.appendChild(option);
         });
@@ -415,7 +453,9 @@ function addMedicationItem(index) {
                 </div>
                 <div class="info-row">
                     <span class="info-label">Weeks Received:</span>
-                    <span class="info-value" data-field="weeksReceived">0</span>
+                    <span class="info-value" data-field="weeksReceived">
+                        <input type="number" class="weeks-received-input" min="0" step="0.1" value="0" style="width: 80px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-primary);">
+                    </span>
                 </div>
                 <div class="info-row highlight">
                     <span class="info-label">Refund:</span>
@@ -440,6 +480,19 @@ function addMedicationItem(index) {
     removeBtn.addEventListener('click', function() {
         removeMedicationItem(index);
     });
+    
+    // Set up weeks received input listener
+    const weeksReceivedInput = medicationItem.querySelector('input.weeks-received-input');
+    if (weeksReceivedInput) {
+        weeksReceivedInput.addEventListener('change', function() {
+            const selectedMed = state.selectedMedications[index];
+            if (selectedMed) {
+                selectedMed.weeksReceived = parseFloat(this.value) || 0;
+                calculateMedicationRefund(selectedMed, medicationItem);
+                calculateTotalRefund();
+            }
+        });
+    }
 }
 
 function handleMedicationSelection(dropdown, index) {
@@ -488,12 +541,24 @@ function updateMedicationDetails(item, medication) {
     const amountPaid = item.querySelector('[data-field="amountPaid"]');
     const medicationDispensed = item.querySelector('[data-field="medicationDispensed"]');
     const weeksPaid = item.querySelector('[data-field="weeksPaid"]');
-    const weeksReceived = item.querySelector('[data-field="weeksReceived"]');
+    const weeksReceivedInput = item.querySelector('input.weeks-received-input');
     
     if (amountPaid) amountPaid.textContent = formatCurrency(medication.amountPaid);
     if (medicationDispensed) medicationDispensed.textContent = `${medication.medicationDispensed} ${medication.unit || ''}`;
     if (weeksPaid) weeksPaid.textContent = medication.weeksPaid;
-    if (weeksReceived) weeksReceived.textContent = medication.weeksReceived || 0;
+    
+    // Update weeks received input
+    if (weeksReceivedInput) {
+        weeksReceivedInput.value = medication.weeksReceived || 0;
+        // Remove existing event listeners and add new one
+        const newInput = weeksReceivedInput.cloneNode(true);
+        weeksReceivedInput.parentNode.replaceChild(newInput, weeksReceivedInput);
+        newInput.addEventListener('change', function() {
+            medication.weeksReceived = parseFloat(this.value) || 0;
+            calculateMedicationRefund(medication, item);
+            calculateTotalRefund();
+        });
+    }
 }
 
 function calculateMedicationRefund(medication, item) {
