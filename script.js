@@ -3,14 +3,17 @@ document.getElementById('calculatorForm').addEventListener('submit', function(e)
     
     // Get input values
     const amountPaid = parseFloat(document.getElementById('amountPaid').value);
-    const medicationDispensed = parseFloat(document.getElementById('medicationDispensed').value);
-    const weeksPaid = parseFloat(document.getElementById('weeksPaid').value);
-    const weeksReceived = parseFloat(document.getElementById('weeksReceived').value);
+    const medicationDispensedText = document.getElementById('medicationDispensed').value;
+    const weeksPaidText = document.getElementById('weeksPaid').value;
+    
+    // Extract numeric values from text inputs (handles text like "100mg" or "4 weeks")
+    const medicationDispensed = extractNumber(medicationDispensedText);
+    const weeksPaid = extractNumber(weeksPaidText);
     
     // Validate inputs
-    if (isNaN(amountPaid) || isNaN(medicationDispensed) || isNaN(weeksPaid) || isNaN(weeksReceived) ||
-        amountPaid < 0 || medicationDispensed < 0 || weeksPaid <= 0 || weeksReceived < 0) {
-        alert('Please enter valid positive numbers for all fields.');
+    if (isNaN(amountPaid) || isNaN(medicationDispensed) || isNaN(weeksPaid) ||
+        amountPaid < 0 || medicationDispensed <= 0 || weeksPaid <= 0) {
+        alert('Please enter valid positive numbers. For medication and weeks, you can include text (e.g., "100mg" or "4 weeks").');
         return;
     }
     
@@ -20,18 +23,11 @@ document.getElementById('calculatorForm').addEventListener('submit', function(e)
     const medicationPerWeek = medicationDispensed / weeksPaid;
     const weeklyCostPerUnit = costPerWeek / medicationPerWeek;
     
-    // Calculate refund: (weeksPaid - weeksReceived) * costPerWeek
-    // Only refund if weeksReceived < weeksPaid
-    const refundAmount = weeksReceived < weeksPaid 
-        ? (weeksPaid - weeksReceived) * costPerWeek 
-        : 0;
-    
     // Display results
     document.getElementById('costPerWeek').textContent = formatCurrency(costPerWeek);
     document.getElementById('costPerUnit').textContent = formatCurrency(costPerUnit);
     document.getElementById('medicationPerWeek').textContent = formatNumber(medicationPerWeek);
     document.getElementById('weeklyCostPerUnit').textContent = formatCurrency(weeklyCostPerUnit);
-    document.getElementById('refundAmount').textContent = formatCurrency(refundAmount);
     
     // Show results section
     document.getElementById('results').classList.remove('hidden');
@@ -39,6 +35,13 @@ document.getElementById('calculatorForm').addEventListener('submit', function(e)
     // Scroll to results smoothly
     document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 });
+
+// Function to extract the first number from a text string
+function extractNumber(text) {
+    // Match the first number (including decimals) in the string
+    const match = text.match(/[\d]+\.?[\d]*/);
+    return match ? parseFloat(match[0]) : NaN;
+}
 
 function formatCurrency(value) {
     return '$' + value.toFixed(2);
