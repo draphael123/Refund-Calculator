@@ -1,15 +1,49 @@
+// Medication data structure (can be populated from spreadsheet)
+// Format: { id, name, amountPaid, medicationDispensed, weeksPaid, weeksReceived, unit }
+let medicationsData = [
+    // Sample data - replace with actual spreadsheet data
+    { id: 1, name: "Medication A", amountPaid: 100, medicationDispensed: 50, weeksPaid: 4, weeksReceived: 3, unit: "mg" },
+    { id: 2, name: "Medication B", amountPaid: 150, medicationDispensed: 75, weeksPaid: 6, weeksReceived: 4, unit: "ml" },
+    { id: 3, name: "Medication C", amountPaid: 200, medicationDispensed: 100, weeksPaid: 8, weeksReceived: 6, unit: "units" },
+    // Add more medications from spreadsheet here
+];
+
+// Load medications from localStorage if available
+function loadMedicationsFromStorage() {
+    const saved = localStorage.getItem('medicationsData');
+    if (saved) {
+        try {
+            medicationsData = JSON.parse(saved);
+        } catch (e) {
+            console.error('Error loading medications:', e);
+        }
+    }
+}
+
+// Save medications to localStorage
+function saveMedicationsToStorage() {
+    try {
+        localStorage.setItem('medicationsData', JSON.stringify(medicationsData));
+    } catch (e) {
+        console.error('Error saving medications:', e);
+    }
+}
+
 // State management
 const state = {
     calculations: [],
-    currentCalculation: null
+    currentCalculation: null,
+    selectedMedications: []
 };
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    loadMedicationsFromStorage();
     initializeTheme();
     initializeTooltips();
     initializeValidation();
     initializeForm();
+    initializeMedications();
     initializeHistory();
     loadFromURL();
     loadHistory();
@@ -295,6 +329,7 @@ function clearForm() {
     document.getElementById('calculatorForm').reset();
     document.getElementById('results').classList.add('hidden');
     document.getElementById('calculationHistory').classList.add('hidden');
+    document.getElementById('refundSummary').style.display = 'none';
     
     // Clear validation states
     document.querySelectorAll('.input-group').forEach(group => {
@@ -306,9 +341,266 @@ function clearForm() {
         error.classList.remove('show');
     });
     
+    // Reset medications
+    state.selectedMedications = [];
+    const medicationsList = document.getElementById('medicationsList');
+    medicationsList.innerHTML = '';
+    addMedicationItem(0);
+    
     state.currentCalculation = null;
     updateURL(null);
     showToast('Form cleared', 'success');
+}
+
+// Medication Management
+function initializeMedications() {
+    populateMedicationDropdowns();
+    
+    document.getElementById('addMedicationBtn').addEventListener('click', function() {
+        const currentCount = document.querySelectorAll('.medication-item').length;
+        addMedicationItem(currentCount);
+    });
+    
+    // Initialize first medication item
+    addMedicationItem(0);
+}
+
+function populateMedicationDropdowns() {
+    const dropdowns = document.querySelectorAll('.medication-dropdown');
+    dropdowns.forEach(dropdown => {
+        // Clear existing options except the first one
+        while (dropdown.options.length > 1) {
+            dropdown.remove(1);
+        }
+        
+        // Add medications from data
+        medicationsData.forEach(med => {
+            const option = document.createElement('option');
+            option.value = med.id;
+            option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}`;
+            option.dataset.medication = JSON.stringify(med);
+            dropdown.appendChild(option);
+        });
+    });
+}
+
+function addMedicationItem(index) {
+    const medicationsList = document.getElementById('medicationsList');
+    const medicationItem = document.createElement('div');
+    medicationItem.className = 'medication-item';
+    medicationItem.setAttribute('data-medication-index', index);
+    
+    medicationItem.innerHTML = `
+        <div class="medication-selector">
+            <select class="medication-dropdown" data-index="${index}" aria-label="Select medication">
+                <option value="">-- Select Medication --</option>
+            </select>
+            <button type="button" class="remove-medication-btn" data-index="${index}" aria-label="Remove medication" ${index === 0 ? 'style="display: none;"' : ''}>
+                <span>🗑️</span>
+            </button>
+        </div>
+        <div class="medication-details hidden" data-details-index="${index}">
+            <div class="medication-info">
+                <div class="info-row">
+                    <span class="info-label">Amount Paid:</span>
+                    <span class="info-value" data-field="amountPaid">$0.00</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Medication Dispensed:</span>
+                    <span class="info-value" data-field="medicationDispensed">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Weeks Paid:</span>
+                    <span class="info-value" data-field="weeksPaid">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Weeks Received:</span>
+                    <span class="info-value" data-field="weeksReceived">0</span>
+                </div>
+                <div class="info-row highlight">
+                    <span class="info-label">Refund:</span>
+                    <span class="info-value" data-field="refund">$0.00</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    medicationsList.appendChild(medicationItem);
+    
+    // Populate dropdown
+    const dropdown = medicationItem.querySelector('.medication-dropdown');
+    populateMedicationDropdowns();
+    
+    // Set up event listeners
+    dropdown.addEventListener('change', function() {
+        handleMedicationSelection(this, index);
+    });
+    
+    const removeBtn = medicationItem.querySelector('.remove-medication-btn');
+    removeBtn.addEventListener('click', function() {
+        removeMedicationItem(index);
+    });
+}
+
+function handleMedicationSelection(dropdown, index) {
+    const selectedValue = dropdown.value;
+    const medicationItem = dropdown.closest('.medication-item');
+    const detailsSection = medicationItem.querySelector('.medication-details');
+    const removeBtn = medicationItem.querySelector('.remove-medication-btn');
+    
+    if (selectedValue) {
+        const medication = medicationsData.find(m => m.id === parseInt(selectedValue));
+        if (medication) {
+            // Create a copy to avoid mutating original data
+            const medCopy = { ...medication };
+            
+            // Update state
+            state.selectedMedications[index] = medCopy;
+            
+            // Show details
+            detailsSection.classList.remove('hidden');
+            
+            // Update details
+            updateMedicationDetails(medicationItem, medCopy);
+            
+            // Show remove button if not first item
+            if (index > 0) {
+                removeBtn.style.display = 'block';
+            }
+            
+            // Calculate refund
+            calculateMedicationRefund(medCopy, medicationItem);
+        }
+    } else {
+        // Clear selection
+        delete state.selectedMedications[index];
+        detailsSection.classList.add('hidden');
+        if (index > 0) {
+            removeBtn.style.display = 'none';
+        }
+    }
+    
+    // Recalculate total refund
+    calculateTotalRefund();
+}
+
+function updateMedicationDetails(item, medication) {
+    const amountPaid = item.querySelector('[data-field="amountPaid"]');
+    const medicationDispensed = item.querySelector('[data-field="medicationDispensed"]');
+    const weeksPaid = item.querySelector('[data-field="weeksPaid"]');
+    const weeksReceived = item.querySelector('[data-field="weeksReceived"]');
+    
+    if (amountPaid) amountPaid.textContent = formatCurrency(medication.amountPaid);
+    if (medicationDispensed) medicationDispensed.textContent = `${medication.medicationDispensed} ${medication.unit || ''}`;
+    if (weeksPaid) weeksPaid.textContent = medication.weeksPaid;
+    if (weeksReceived) weeksReceived.textContent = medication.weeksReceived || 0;
+}
+
+function calculateMedicationRefund(medication, item) {
+    const costPerWeek = medication.amountPaid / medication.weeksPaid;
+    const weeksReceived = medication.weeksReceived || 0;
+    const refund = weeksReceived < medication.weeksPaid 
+        ? (medication.weeksPaid - weeksReceived) * costPerWeek 
+        : 0;
+    
+    const refundElement = item.querySelector('[data-field="refund"]');
+    if (refundElement) {
+        refundElement.textContent = formatCurrency(refund);
+    }
+    
+    // Store refund in medication object
+    medication.refund = refund;
+    
+    return refund;
+}
+
+function calculateTotalRefund() {
+    const totalRefund = state.selectedMedications.reduce((sum, med) => {
+        if (med && med.refund) {
+            return sum + med.refund;
+        }
+        return sum;
+    }, 0);
+    
+    const refundSummary = document.getElementById('refundSummary');
+    const totalRefundElement = document.getElementById('totalRefund');
+    const medicationRefundsList = document.getElementById('medicationRefundsList');
+    
+    if (totalRefund > 0 && state.selectedMedications.length > 0) {
+        refundSummary.style.display = 'block';
+        if (totalRefundElement) {
+            totalRefundElement.textContent = formatCurrency(totalRefund);
+        }
+        
+        // Update individual medication refunds list
+        if (medicationRefundsList) {
+            medicationRefundsList.innerHTML = '';
+            state.selectedMedications.forEach(med => {
+                if (med && med.refund && med.refund > 0) {
+                    const refundItem = document.createElement('div');
+                    refundItem.className = 'medication-refund-item';
+                    refundItem.innerHTML = `
+                        <span class="medication-name">${med.name}</span>
+                        <span class="refund-amount">${formatCurrency(med.refund)}</span>
+                    `;
+                    medicationRefundsList.appendChild(refundItem);
+                }
+            });
+        }
+    } else {
+        refundSummary.style.display = 'none';
+    }
+    
+    return totalRefund;
+}
+
+function removeMedicationItem(index) {
+    const medicationItem = document.querySelector(`[data-medication-index="${index}"]`);
+    if (medicationItem) {
+        medicationItem.remove();
+        delete state.selectedMedications[index];
+        
+        // Reindex remaining items
+        reindexMedicationItems();
+        calculateTotalRefund();
+    }
+}
+
+function reindexMedicationItems() {
+    const items = document.querySelectorAll('.medication-item');
+    items.forEach((item, newIndex) => {
+        const oldIndex = item.getAttribute('data-medication-index');
+        item.setAttribute('data-medication-index', newIndex);
+        
+        const dropdown = item.querySelector('.medication-dropdown');
+        const removeBtn = item.querySelector('.remove-medication-btn');
+        const detailsSection = item.querySelector('.medication-details');
+        
+        if (dropdown) {
+            dropdown.setAttribute('data-index', newIndex);
+            dropdown.addEventListener('change', function() {
+                handleMedicationSelection(this, newIndex);
+            });
+        }
+        
+        if (removeBtn) {
+            removeBtn.setAttribute('data-index', newIndex);
+            removeBtn.addEventListener('click', function() {
+                removeMedicationItem(newIndex);
+            });
+            removeBtn.style.display = newIndex === 0 ? 'none' : 'block';
+        }
+        
+        if (detailsSection) {
+            detailsSection.setAttribute('data-details-index', newIndex);
+        }
+        
+        // Move medication data if it exists
+        if (state.selectedMedications[oldIndex]) {
+            state.selectedMedications[newIndex] = state.selectedMedications[oldIndex];
+            delete state.selectedMedications[oldIndex];
+        }
+    });
 }
 
 // Utility Functions

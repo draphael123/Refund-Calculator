@@ -101,6 +101,54 @@
                     <span class="validation-icon"></span>
                 </div>
                 
+                <div class="medications-section">
+                    <div class="section-header">
+                        <label>
+                            Medications from Spreadsheet
+                            <span class="tooltip-icon" data-tooltip="Select medications from the spreadsheet to calculate refunds. Click + to add multiple medications.">ℹ️</span>
+                        </label>
+                    </div>
+                    <div id="medicationsList" class="medications-list">
+                        <div class="medication-item" data-medication-index="0">
+                            <div class="medication-selector">
+                                <select class="medication-dropdown" data-index="0" aria-label="Select medication">
+                                    <option value="">-- Select Medication --</option>
+                                </select>
+                                <button type="button" class="remove-medication-btn" data-index="0" aria-label="Remove medication" style="display: none;">
+                                    <span>🗑️</span>
+                                </button>
+                            </div>
+                            <div class="medication-details hidden" data-details-index="0">
+                                <div class="medication-info">
+                                    <div class="info-row">
+                                        <span class="info-label">Amount Paid:</span>
+                                        <span class="info-value" data-field="amountPaid">$0.00</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Medication Dispensed:</span>
+                                        <span class="info-value" data-field="medicationDispensed">0</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Weeks Paid:</span>
+                                        <span class="info-value" data-field="weeksPaid">0</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Weeks Received:</span>
+                                        <span class="info-value" data-field="weeksReceived">0</span>
+                                    </div>
+                                    <div class="info-row highlight">
+                                        <span class="info-label">Refund:</span>
+                                        <span class="info-value" data-field="refund">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="add-medication-btn" id="addMedicationBtn" aria-label="Add another medication">
+                        <span>➕</span> Add Medication
+                    </button>
+                </div>
+                
                 <div class="button-group">
                     <button type="submit" class="calculate-btn" id="calculateBtn">
                         <span class="btn-text">Calculate</span>
@@ -162,6 +210,15 @@
                             <span class="result-label">Cost for 1 Year (52 weeks):</span>
                             <span class="result-value" id="costOneYear">$0.00</span>
                         </div>
+                    </div>
+                    
+                    <div class="refund-summary" id="refundSummary" style="display: none;">
+                        <h3>Refund Summary</h3>
+                        <div class="result-item refund">
+                            <span class="result-label">Total Refund Amount:</span>
+                            <span class="result-value" id="totalRefund">$0.00</span>
+                        </div>
+                        <div id="medicationRefundsList" class="medication-refunds-list"></div>
                     </div>
                 </div>
             </div>
