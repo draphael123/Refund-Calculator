@@ -352,6 +352,24 @@ function displayResults(results) {
     document.getElementById('costSixMonths').textContent = formatCurrency(results.costSixMonths);
     document.getElementById('costOneYear').textContent = formatCurrency(results.costOneYear);
     
+    // Calculate and display total intended refund from medications
+    const totalRefund = calculateTotalRefund();
+    const totalRefundItem = document.getElementById('totalRefundItem');
+    const totalIntendedRefund = document.getElementById('totalIntendedRefund');
+    
+    if (totalRefund > 0 && state.selectedMedications.length > 0) {
+        if (totalIntendedRefund) {
+            totalIntendedRefund.textContent = formatCurrency(totalRefund);
+        }
+        if (totalRefundItem) {
+            totalRefundItem.style.display = 'flex';
+        }
+    } else {
+        if (totalRefundItem) {
+            totalRefundItem.style.display = 'none';
+        }
+    }
+    
     // Show results section
     const resultsSection = document.getElementById('results');
     resultsSection.classList.remove('hidden');
@@ -591,10 +609,22 @@ function calculateTotalRefund() {
     const totalRefundElement = document.getElementById('totalRefund');
     const medicationRefundsList = document.getElementById('medicationRefundsList');
     
+    // Update main results display
+    const totalRefundItem = document.getElementById('totalRefundItem');
+    const totalIntendedRefund = document.getElementById('totalIntendedRefund');
+    
     if (totalRefund > 0 && state.selectedMedications.length > 0) {
         refundSummary.style.display = 'block';
         if (totalRefundElement) {
             totalRefundElement.textContent = formatCurrency(totalRefund);
+        }
+        
+        // Update main results total refund display
+        if (totalIntendedRefund) {
+            totalIntendedRefund.textContent = formatCurrency(totalRefund);
+        }
+        if (totalRefundItem) {
+            totalRefundItem.style.display = 'flex';
         }
         
         // Update individual medication refunds list
@@ -614,6 +644,9 @@ function calculateTotalRefund() {
         }
     } else {
         refundSummary.style.display = 'none';
+        if (totalRefundItem) {
+            totalRefundItem.style.display = 'none';
+        }
     }
     
     return totalRefund;
