@@ -66,11 +66,312 @@ function saveMedicationsToStorage() {
     }
 }
 
+// Extract category from medication name
+function extractCategory(medicationName) {
+    const name = medicationName.toUpperCase();
+    if (name.startsWith('TRT -')) return 'TRT';
+    if (name.startsWith('HRT -')) return 'HRT';
+    if (name.startsWith('ED -')) return 'ED';
+    if (name.startsWith('HAIR -')) return 'HAIR';
+    if (name.startsWith('GLP -')) return 'GLP';
+    if (name.includes('ENCLOMIPHENE') || name.includes('ENC')) return 'ENC';
+    if (name.includes('HCG')) return 'HCG';
+    if (name.includes('THYROID')) return 'THYROID';
+    if (name.includes('PROGESTERONE')) return 'HRT';
+    if (name.includes('TESTOSTERONE')) return name.includes('FEMALE') ? 'HRT' : 'TRT';
+    return 'OTHER';
+}
+
+// Get unique categories from medications
+function getCategories() {
+    const categories = new Set();
+    medicationsData.forEach(med => {
+        categories.add(extractCategory(med.name));
+    });
+    return Array.from(categories).sort();
+}
+
+// Get unique pharmacies from medications
+function getPharmacies() {
+    const pharmacies = new Set();
+    medicationsData.forEach(med => {
+        if (med.pharmacy) pharmacies.add(med.pharmacy);
+    });
+    return Array.from(pharmacies).sort();
+}
+
+// Filter medications based on current filters
+function getFilteredMedications() {
+    let filtered = [...medicationsData];
+    
+    // Category filter
+    if (state.filters.categories.length > 0) {
+        filtered = filtered.filter(med => 
+            state.filters.categories.includes(extractCategory(med.name))
+        );
+    }
+    
+    // Pharmacy filter
+    if (state.filters.pharmacies.length > 0) {
+        filtered = filtered.filter(med => 
+            med.pharmacy && state.filters.pharmacies.includes(med.pharmacy)
+        );
+    }
+    
+    // Price range filter
+    if (state.filters.priceRange.min > 0 || state.filters.priceRange.max < Infinity) {
+        filtered = filtered.filter(med => 
+            med.amountPaid >= state.filters.priceRange.min && 
+            med.amountPaid <= state.filters.priceRange.max
+        );
+    }
+    
+    return filtered;
+}
+
+// Save favorites to localStorage
+function saveFavorites() {
+    try {
+        localStorage.setItem('medicationFavorites', JSON.stringify(state.favorites));
+    } catch (e) {
+        console.error('Error saving favorites:', e);
+    }
+}
+
+// Add to favorites
+function addToFavorites(medicationId) {
+    if (!state.favorites.includes(medicationId)) {
+        state.favorites.push(medicationId);
+        saveFavorites();
+        return true;
+    }
+    return false;
+}
+
+// Remove from favorites
+function removeFromFavorites(medicationId) {
+    const index = state.favorites.indexOf(medicationId);
+    if (index > -1) {
+        state.favorites.splice(index, 1);
+        saveFavorites();
+        return true;
+    }
+    return false;
+}
+
+// Add to recently used
+function addToRecentlyUsed(medicationId) {
+    const index = state.recentlyUsed.indexOf(medicationId);
+    if (index > -1) {
+        state.recentlyUsed.splice(index, 1);
+    }
+    state.recentlyUsed.unshift(medicationId);
+    // Keep only last 10
+    if (state.recentlyUsed.length > 10) {
+        state.recentlyUsed = state.recentlyUsed.slice(0, 10);
+    }
+    try {
+        localStorage.setItem('recentlyUsedMedications', JSON.stringify(state.recentlyUsed));
+    } catch (e) {
+        console.error('Error saving recently used:', e);
+    }
+}
+
+// Save draft form state
+function saveDraft() {
+    const formData = {
+        amountPaid: document.getElementById('amountPaid').value,
+        medicationDispensed: document.getElementById('medicationDispensed').value,
+        medicationUnit: document.getElementById('medicationUnit').value,
+        weeksPaid: document.getElementById('weeksPaid').value,
+        weeksReceived: document.getElementById('weeksReceived').value,
+        timestamp: Date.now()
+    };
+    state.draft = formData;
+    try {
+        localStorage.setItem('formDraft', JSON.stringify(formData));
+    } catch (e) {
+        console.error('Error saving draft:', e);
+    }
+}
+
+// Load draft form state
+function loadDraft() {
+    try {
+        const saved = localStorage.getItem('formDraft');
+        if (saved) {
+            const draft = JSON.parse(saved);
+            // Only load if draft is less than 7 days old
+            if (Date.now() - draft.timestamp < 7 * 24 * 60 * 60 * 1000) {
+                state.draft = draft;
+                return draft;
+            } else {
+                localStorage.removeItem('formDraft');
+            }
+        }
+    } catch (e) {
+        console.error('Error loading draft:', e);
+    }
+    return null;
+}
+
+// Clear draft
+function clearDraft() {
+    state.draft = null;
+    localStorage.removeItem('formDraft');
+}
+
+// Validate calculation for warnings
+function validateCalculation(calculation) {
+    const warnings = [];
+    const { inputs, results } = calculation;
+    
+    // Check if refund exceeds 50% of amount paid
+    if (results.refund > inputs.amountPaid * 0.5) {
+        warnings.push({
+            type: 'high-refund',
+            message: `High refund amount: ${formatCurrency(results.refund)} (${((results.refund / inputs.amountPaid) * 100).toFixed(1)}% of amount paid). Please verify inputs.`,
+            severity: 'warning'
+        });
+    }
+    
+    // Check if weeks received > weeks paid
+    if (inputs.weeksReceived > inputs.weeksPaid) {
+        warnings.push({
+            type: 'weeks-mismatch',
+            message: `Weeks received (${inputs.weeksReceived}) exceeds weeks paid (${inputs.weeksPaid}). This may indicate an error.`,
+            severity: 'error'
+        });
+    }
+    
+    // Check for unusually high cost per unit
+    if (results.costPerUnit > 1000) {
+        warnings.push({
+            type: 'high-cost',
+            message: `High cost per unit: ${formatCurrency(results.costPerUnit)}. Please verify medication amount.`,
+            severity: 'warning'
+        });
+    }
+    
+    // Check for unusually low cost per week
+    if (results.costPerWeek < 1) {
+        warnings.push({
+            type: 'low-cost',
+            message: `Very low cost per week: ${formatCurrency(results.costPerWeek)}. Please verify inputs.`,
+            severity: 'warning'
+        });
+    }
+    
+    return warnings;
+}
+
+// Export data for backup
+function exportBackup() {
+    const backup = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        medications: medicationsData,
+        calculations: state.calculations,
+        favorites: state.favorites,
+        templates: state.templates,
+        settings: {
+            theme: localStorage.getItem('theme'),
+            instructionsExpanded: localStorage.getItem('instructionsExpanded')
+        }
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `refund-calculator-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup exported successfully!', 'success');
+}
+
+// Import data from backup
+function importBackup(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backup = JSON.parse(e.target.result);
+            if (confirm('Importing backup will replace current data. Continue?')) {
+                if (backup.medications) medicationsData = backup.medications;
+                if (backup.calculations) state.calculations = backup.calculations;
+                if (backup.favorites) state.favorites = backup.favorites;
+                if (backup.templates) state.templates = backup.templates;
+                if (backup.settings) {
+                    if (backup.settings.theme) localStorage.setItem('theme', backup.settings.theme);
+                    if (backup.settings.instructionsExpanded) localStorage.setItem('instructionsExpanded', backup.settings.instructionsExpanded);
+                }
+                saveMedicationsToStorage();
+                saveHistory();
+                saveFavorites();
+                saveTemplates();
+                location.reload();
+            }
+        } catch (err) {
+            showToast('Error importing backup: Invalid file format', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// Save templates
+function saveTemplates() {
+    try {
+        localStorage.setItem('calculationTemplates', JSON.stringify(state.templates));
+    } catch (e) {
+        console.error('Error saving templates:', e);
+    }
+}
+
+// Save calculation as template
+function saveAsTemplate(name, description) {
+    if (!state.currentCalculation) return false;
+    const template = {
+        id: Date.now(),
+        name: name || `Template ${state.templates.length + 1}`,
+        description: description || '',
+        inputs: state.currentCalculation.inputs,
+        timestamp: new Date().toISOString()
+    };
+    state.templates.push(template);
+    saveTemplates();
+    return true;
+}
+
+// Load template
+function loadTemplate(templateId) {
+    const template = state.templates.find(t => t.id === templateId);
+    if (!template) return false;
+    const inputs = template.inputs;
+    document.getElementById('amountPaid').value = inputs.amountPaid;
+    document.getElementById('medicationDispensed').value = inputs.medicationDispensed;
+    document.getElementById('medicationUnit').value = inputs.medicationUnit || '';
+    document.getElementById('weeksPaid').value = inputs.weeksPaid;
+    document.getElementById('weeksReceived').value = inputs.weeksReceived || 0;
+    return true;
+}
+
 // State management
 const state = {
     calculations: [],
     currentCalculation: null,
-    selectedMedications: []
+    selectedMedications: [],
+    filters: {
+        categories: [],
+        pharmacies: [],
+        priceRange: { min: 0, max: Infinity }
+    },
+    favorites: JSON.parse(localStorage.getItem('medicationFavorites') || '[]'),
+    recentlyUsed: JSON.parse(localStorage.getItem('recentlyUsedMedications') || '[]'),
+    draft: null,
+    calculationNotes: {},
+    templates: JSON.parse(localStorage.getItem('calculationTemplates') || '[]'),
+    currency: localStorage.getItem('selectedCurrency') || 'USD'
 };
 
 // Initialize
@@ -83,9 +384,154 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeForm();
     initializeMedications();
     initializeHistory();
+    setTimeout(() => {
+        initializeFiltersUI();
+        initializeTemplates();
+        initializeBackupRestore();
+        loadCalculationNotes();
+        
+        // Add CSV export button handler
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', exportToCSV);
+        }
+    }, 200);
+    initializeAutoSave();
+    initializeFilters();
+    checkForDraft();
     loadFromURL();
     loadHistory();
 });
+
+// Check for draft on load
+function checkForDraft() {
+    const draft = loadDraft();
+    if (draft && !document.getElementById('amountPaid').value) {
+        if (confirm('You have a saved draft. Would you like to restore it?')) {
+            document.getElementById('amountPaid').value = draft.amountPaid || '';
+            document.getElementById('medicationDispensed').value = draft.medicationDispensed || '';
+            document.getElementById('medicationUnit').value = draft.medicationUnit || '';
+            document.getElementById('weeksPaid').value = draft.weeksPaid || '';
+            document.getElementById('weeksReceived').value = draft.weeksReceived || '';
+            showToast('Draft restored', 'success');
+        }
+    }
+}
+
+// Initialize auto-save
+function initializeAutoSave() {
+    const inputs = ['amountPaid', 'medicationDispensed', 'weeksPaid', 'weeksReceived'];
+    let saveTimeout;
+    
+    inputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('input', function() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    saveDraft();
+                }, 1000); // Debounce 1 second
+            });
+            
+            // Add smart suggestions for numeric inputs
+            if (inputId === 'amountPaid' || inputId === 'weeksPaid' || inputId === 'weeksReceived') {
+                initializeInputSuggestions(input, inputId);
+            }
+        }
+    });
+    
+    const unitSelect = document.getElementById('medicationUnit');
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function() {
+            saveDraft();
+        });
+    }
+}
+
+// Initialize input suggestions based on history
+function initializeInputSuggestions(input, inputId) {
+    let suggestionsContainer = input.parentElement.querySelector('.input-suggestions');
+    if (!suggestionsContainer) {
+        suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'input-suggestions';
+        input.parentElement.appendChild(suggestionsContainer);
+    }
+    
+    input.addEventListener('focus', function() {
+        showInputSuggestions(input, inputId, suggestionsContainer);
+    });
+    
+    input.addEventListener('blur', function() {
+        // Delay hiding to allow clicks on suggestions
+        setTimeout(() => {
+            suggestionsContainer.classList.remove('show');
+        }, 200);
+    });
+    
+    input.addEventListener('input', function() {
+        if (this.value.trim() === '') {
+            suggestionsContainer.classList.remove('show');
+        }
+    });
+}
+
+// Show input suggestions
+function showInputSuggestions(input, inputId, container) {
+    const suggestions = getSuggestionsForField(inputId);
+    if (suggestions.length === 0) {
+        container.classList.remove('show');
+        return;
+    }
+    
+    container.innerHTML = '';
+    suggestions.slice(0, 5).forEach(suggestion => {
+        const suggestionEl = document.createElement('button');
+        suggestionEl.type = 'button';
+        suggestionEl.className = 'input-suggestion';
+        suggestionEl.textContent = suggestion.value + (suggestion.count > 1 ? ` (${suggestion.count}x)` : '');
+        suggestionEl.addEventListener('click', function() {
+            input.value = suggestion.value;
+            input.dispatchEvent(new Event('input'));
+            input.focus();
+            container.classList.remove('show');
+        });
+        container.appendChild(suggestionEl);
+    });
+    
+    container.classList.add('show');
+}
+
+// Get suggestions for a field from history
+function getSuggestionsForField(fieldId) {
+    const suggestions = {};
+    
+    state.calculations.forEach(calc => {
+        let value = null;
+        if (fieldId === 'amountPaid') {
+            value = calc.inputs.amountPaid.toString();
+        } else if (fieldId === 'weeksPaid') {
+            value = calc.inputs.weeksPaid.toString();
+        } else if (fieldId === 'weeksReceived') {
+            value = (calc.inputs.weeksReceived || 0).toString();
+        }
+        
+        if (value) {
+            if (!suggestions[value]) {
+                suggestions[value] = { value, count: 0 };
+            }
+            suggestions[value].count++;
+        }
+    });
+    
+    return Object.values(suggestions)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+}
+
+// Initialize filters UI (will be implemented in HTML update)
+function initializeFilters() {
+    // Filter functionality is ready, UI will be added in HTML
+}
 
 // Theme Management
 function initializeTheme() {
@@ -94,6 +540,12 @@ function initializeTheme() {
     updateThemeIcon(savedTheme);
     
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    
+    // Keyboard shortcuts button
+    const shortcutsBtn = document.getElementById('keyboardShortcutsBtn');
+    if (shortcutsBtn) {
+        shortcutsBtn.addEventListener('click', showKeyboardShortcutsModal);
+    }
 }
 
 // Instructions Management
@@ -381,10 +833,15 @@ function performCalculation() {
     const costSixMonths = costPerWeek * 24;
     const costOneYear = costPerWeek * 52;
     
+    // Get notes if available
+    const notesElement = document.getElementById('calculationNotes');
+    const notes = notesElement ? notesElement.value.trim() : '';
+    
     // Store calculation
     const calculation = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
+        notes: notes,
         inputs: {
             amountPaid,
             medicationDispensed,
@@ -405,6 +862,17 @@ function performCalculation() {
         }
     };
     
+    // Save notes
+    if (notes) {
+        if (!state.calculationNotes) state.calculationNotes = {};
+        state.calculationNotes[calculation.id] = notes;
+        try {
+            localStorage.setItem('calculationNotes', JSON.stringify(state.calculationNotes));
+        } catch (e) {
+            console.error('Error saving notes:', e);
+        }
+    }
+    
     state.currentCalculation = calculation;
     state.calculations.unshift(calculation);
     
@@ -413,8 +881,15 @@ function performCalculation() {
         state.calculations = state.calculations.slice(0, 10);
     }
     
+    // Validate and show warnings
+    const warnings = validateCalculation(calculation);
+    calculation.warnings = warnings;
+    
     // Display results
-    displayResults(calculation.results);
+    displayResults(calculation.results, warnings);
+    
+    // Clear draft after successful calculation
+    clearDraft();
     
     // Save to localStorage
     saveHistory();
@@ -425,7 +900,17 @@ function performCalculation() {
     showToast('Calculation completed!', 'success');
 }
 
-function displayResults(results) {
+function displayResults(results, warnings = []) {
+    // Display warnings if any
+    if (warnings.length > 0) {
+        displayWarnings(warnings);
+    } else {
+        hideWarnings();
+    }
+    
+    // Update sticky summary card
+    updateResultsSummaryCard(results);
+    
     // Display main refund amount at the top
     const mainRefundItem = document.getElementById('mainRefundItem');
     const mainRefundAmount = document.getElementById('mainRefundAmount');
@@ -506,6 +991,8 @@ function clearForm() {
     document.getElementById('calculationHistory').classList.add('hidden');
     document.getElementById('refundSummary').style.display = 'none';
     document.getElementById('mainRefundItem').style.display = 'none';
+    hideWarnings();
+    hideResultsSummaryCard();
     
     // Clear validation states
     document.querySelectorAll('.input-group').forEach(group => {
@@ -524,8 +1011,78 @@ function clearForm() {
     addMedicationItem(0);
     
     state.currentCalculation = null;
+    clearDraft();
     updateURL(null);
     showToast('Form cleared', 'success');
+}
+
+// Display warnings
+function displayWarnings(warnings) {
+    let warningsContainer = document.getElementById('calculationWarnings');
+    if (!warningsContainer) {
+        warningsContainer = document.createElement('div');
+        warningsContainer.id = 'calculationWarnings';
+        warningsContainer.className = 'calculation-warnings';
+        const resultsSection = document.getElementById('results');
+        if (resultsSection) {
+            resultsSection.insertBefore(warningsContainer, resultsSection.firstChild);
+        }
+    }
+    
+    warningsContainer.innerHTML = '';
+    warningsContainer.classList.remove('hidden');
+    
+    warnings.forEach(warning => {
+        const warningEl = document.createElement('div');
+        warningEl.className = `warning-item ${warning.severity}`;
+        warningEl.innerHTML = `
+            <span class="warning-icon">${warning.severity === 'error' ? '⚠️' : 'ℹ️'}</span>
+            <span class="warning-message">${warning.message}</span>
+        `;
+        warningsContainer.appendChild(warningEl);
+    });
+}
+
+// Hide warnings
+function hideWarnings() {
+    const warningsContainer = document.getElementById('calculationWarnings');
+    if (warningsContainer) {
+        warningsContainer.classList.add('hidden');
+    }
+}
+
+// Update results summary card
+function updateResultsSummaryCard(results) {
+    const summaryCard = document.getElementById('resultsSummaryCard');
+    const summaryRefundAmount = document.getElementById('summaryRefundAmount');
+    const summaryCostPerWeek = document.getElementById('summaryCostPerWeek');
+    const summaryWeeksInfo = document.getElementById('summaryWeeksInfo');
+    
+    if (!summaryCard || !state.currentCalculation) return;
+    
+    const calc = state.currentCalculation;
+    
+    if (summaryRefundAmount) {
+        summaryRefundAmount.textContent = formatCurrency(results.refund || 0);
+    }
+    
+    if (summaryCostPerWeek) {
+        summaryCostPerWeek.textContent = `Cost/Week: ${formatCurrency(results.costPerWeek)}`;
+    }
+    
+    if (summaryWeeksInfo && calc.inputs) {
+        summaryWeeksInfo.textContent = `${calc.inputs.weeksReceived || 0}/${calc.inputs.weeksPaid} weeks`;
+    }
+    
+    summaryCard.classList.remove('hidden');
+}
+
+// Hide summary card
+function hideResultsSummaryCard() {
+    const summaryCard = document.getElementById('resultsSummaryCard');
+    if (summaryCard) {
+        summaryCard.classList.add('hidden');
+    }
 }
 
 // Medication Management
@@ -549,15 +1106,71 @@ function populateMedicationDropdowns() {
             dropdown.remove(1);
         }
         
-        // Add medications from data, sorted by name
-        const sortedMeds = [...medicationsData].sort((a, b) => a.name.localeCompare(b.name));
-        sortedMeds.forEach(med => {
-            const option = document.createElement('option');
-            option.value = med.id;
-            option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}${med.pharmacy ? ` (${med.pharmacy})` : ''}`;
-            option.dataset.medication = JSON.stringify(med);
-            dropdown.appendChild(option);
+        // Get filtered medications
+        let medsToShow = getFilteredMedications();
+        
+        // Sort: favorites first, then recently used, then by name
+        medsToShow.sort((a, b) => {
+            const aIsFavorite = state.favorites.includes(a.id);
+            const bIsFavorite = state.favorites.includes(b.id);
+            const aIsRecent = state.recentlyUsed.includes(a.id);
+            const bIsRecent = state.recentlyUsed.includes(b.id);
+            
+            if (aIsFavorite && !bIsFavorite) return -1;
+            if (!aIsFavorite && bIsFavorite) return 1;
+            if (aIsRecent && !bIsRecent) return -1;
+            if (!aIsRecent && bIsRecent) return 1;
+            return a.name.localeCompare(b.name);
         });
+        
+        // Add recently used section if items exist
+        const recentMeds = medsToShow.filter(m => state.recentlyUsed.includes(m.id));
+        if (recentMeds.length > 0 && dropdown.selectedIndex === 0) {
+            const recentGroup = document.createElement('optgroup');
+            recentGroup.label = '━━━ Recently Used ━━━';
+            dropdown.appendChild(recentGroup);
+            
+            recentMeds.forEach(med => {
+                const option = document.createElement('option');
+                option.value = med.id;
+                const favoriteIcon = state.favorites.includes(med.id) ? ' ⭐' : '';
+                option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}${med.pharmacy ? ` (${med.pharmacy})` : ''}${favoriteIcon}`;
+                option.dataset.medication = JSON.stringify(med);
+                recentGroup.appendChild(option);
+            });
+        }
+        
+        // Add favorites section
+        const favoriteMeds = medsToShow.filter(m => state.favorites.includes(m.id) && !state.recentlyUsed.includes(m.id));
+        if (favoriteMeds.length > 0) {
+            const favGroup = document.createElement('optgroup');
+            favGroup.label = '━━━ Favorites ⭐ ━━━';
+            dropdown.appendChild(favGroup);
+            
+            favoriteMeds.forEach(med => {
+                const option = document.createElement('option');
+                option.value = med.id;
+                option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}${med.pharmacy ? ` (${med.pharmacy})` : ''} ⭐`;
+                option.dataset.medication = JSON.stringify(med);
+                favGroup.appendChild(option);
+            });
+        }
+        
+        // Add all other medications
+        const otherMeds = medsToShow.filter(m => !state.favorites.includes(m.id) && !state.recentlyUsed.includes(m.id));
+        if (otherMeds.length > 0) {
+            const otherGroup = document.createElement('optgroup');
+            otherGroup.label = '━━━ All Medications ━━━';
+            dropdown.appendChild(otherGroup);
+            
+            otherMeds.forEach(med => {
+                const option = document.createElement('option');
+                option.value = med.id;
+                option.textContent = `${med.name} - ${formatCurrency(med.amountPaid)}${med.pharmacy ? ` (${med.pharmacy})` : ''}`;
+                option.dataset.medication = JSON.stringify(med);
+                otherGroup.appendChild(option);
+            });
+        }
     });
 }
 
@@ -643,8 +1256,26 @@ function handleMedicationSelection(dropdown, index) {
     if (selectedValue) {
         const medication = medicationsData.find(m => m.id === parseInt(selectedValue));
         if (medication) {
+            // Check for duplicate medication selection
+            const isDuplicate = state.selectedMedications.some((med, idx) => 
+                idx !== index && med && med.id === medication.id
+            );
+            
+            if (isDuplicate) {
+                const proceed = confirm(`You've already selected "${medication.name}". Do you want to add it again?`);
+                if (!proceed) {
+                    dropdown.value = '';
+                    return;
+                } else {
+                    showToast('Duplicate medication added', 'warning');
+                }
+            }
+            
             // Create a copy to avoid mutating original data
             const medCopy = { ...medication };
+            
+            // Add to recently used
+            addToRecentlyUsed(medication.id);
             
             // Update state
             state.selectedMedications[index] = medCopy;
@@ -841,8 +1472,35 @@ function convertUnit(value, unit) {
     return conversions[unit.toLowerCase()] ? conversions[unit.toLowerCase()](value) : value;
 }
 
+// Currency support
+const currencySymbols = {
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'CAD': 'C$',
+    'AUD': 'A$',
+    'JPY': '¥',
+    'CNY': '¥',
+    'INR': '₹',
+    'BRL': 'R$',
+    'MXN': '$'
+};
+
 function formatCurrency(value) {
-    return '$' + value.toFixed(2);
+    const symbol = currencySymbols[state.currency] || '$';
+    return symbol + value.toFixed(2);
+}
+
+function setCurrency(currency) {
+    if (currencySymbols[currency]) {
+        state.currency = currency;
+        localStorage.setItem('selectedCurrency', currency);
+        // Refresh display if calculation exists
+        if (state.currentCalculation) {
+            displayResults(state.currentCalculation.results, state.currentCalculation.warnings || []);
+        }
+        showToast(`Currency changed to ${currency}`, 'success');
+    }
 }
 
 function formatNumber(value) {
@@ -1065,24 +1723,141 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Keyboard Navigation
+// Keyboard Navigation & Shortcuts
 document.addEventListener('keydown', function(e) {
-    // Escape to clear
-    if (e.key === 'Escape') {
-        const activeElement = document.activeElement;
-        if (activeElement.tagName === 'INPUT') {
-            activeElement.blur();
+    // Don't trigger shortcuts when typing in inputs/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        // Escape to clear focus
+        if (e.key === 'Escape') {
+            e.target.blur();
+            return;
         }
+        
+        // Enter to submit (if form is valid and not in textarea)
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT' && !e.shiftKey) {
+            const form = document.getElementById('calculatorForm');
+            if (form.checkValidity()) {
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        }
+        return;
     }
     
-    // Enter to submit (if form is valid)
-    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-        const form = document.getElementById('calculatorForm');
-        if (form.checkValidity()) {
-            form.dispatchEvent(new Event('submit', { cancelable: true }));
+    // Global shortcuts (only when not in input)
+    // ? - Show keyboard shortcuts
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        showKeyboardShortcutsModal();
+        return;
+    }
+    
+    // Ctrl/Cmd + K - Focus search/filters
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const firstFilter = document.querySelector('.filter-chip');
+        if (firstFilter) firstFilter.focus();
+        return;
+    }
+    
+    // Ctrl/Cmd + S - Save template
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+        if (saveTemplateBtn) saveTemplateBtn.click();
+        return;
+    }
+    
+    // Ctrl/Cmd + D - Clear form
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        const clearBtn = document.getElementById('clearBtn');
+        if (clearBtn) clearBtn.click();
+        return;
+    }
+    
+    // Arrow keys for navigation (when results are visible)
+    const resultsSection = document.getElementById('results');
+    if (resultsSection && !resultsSection.classList.contains('hidden')) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            // Could implement navigation through results
         }
     }
 });
+
+// Show keyboard shortcuts modal
+function showKeyboardShortcutsModal() {
+    let modal = document.getElementById('keyboardShortcutsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'keyboardShortcutsModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Keyboard Shortcuts</h2>
+                    <button class="modal-close" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="shortcuts-section">
+                        <h3>Form Navigation</h3>
+                        <div class="shortcut-item">
+                            <kbd>Enter</kbd>
+                            <span>Submit form (when valid)</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Esc</kbd>
+                            <span>Clear focus from input</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Tab</kbd>
+                            <span>Move to next field</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Shift</kbd> + <kbd>Tab</kbd>
+                            <span>Move to previous field</span>
+                        </div>
+                    </div>
+                    <div class="shortcuts-section">
+                        <h3>Actions</h3>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> / <kbd>Cmd</kbd> + <kbd>S</kbd>
+                            <span>Save as template</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> / <kbd>Cmd</kbd> + <kbd>D</kbd>
+                            <span>Clear form</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl</kbd> / <kbd>Cmd</kbd> + <kbd>K</kbd>
+                            <span>Focus filters</span>
+                        </div>
+                    </div>
+                    <div class="shortcuts-section">
+                        <h3>Help</h3>
+                        <div class="shortcut-item">
+                            <kbd>?</kbd>
+                            <span>Show this shortcuts modal</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        modal.querySelector('.modal-close').addEventListener('click', () => {
+            modal.classList.remove('show');
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+    }
+    
+    modal.classList.add('show');
+}
 
 // Accessibility: Focus management
 document.querySelectorAll('input, button, select').forEach(element => {
@@ -1096,3 +1871,300 @@ document.querySelectorAll('input, button, select').forEach(element => {
         this.style.outlineOffset = '';
     });
 });
+
+// Initialize filters UI
+function initializeFiltersUI() {
+    const categoryFiltersContainer = document.getElementById('categoryFilters');
+    const pharmacyFiltersContainer = document.getElementById('pharmacyFilters');
+    const priceRangeFilter = document.getElementById('priceRangeFilter');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    
+    if (!categoryFiltersContainer || !pharmacyFiltersContainer) return;
+    
+    // Create category filter chips
+    const categories = getCategories();
+    categories.forEach(category => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'filter-chip';
+        chip.textContent = category;
+        chip.dataset.category = category;
+        chip.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const isActive = this.classList.contains('active');
+            if (isActive) {
+                if (!state.filters.categories.includes(category)) {
+                    state.filters.categories.push(category);
+                }
+            } else {
+                const index = state.filters.categories.indexOf(category);
+                if (index > -1) state.filters.categories.splice(index, 1);
+            }
+            updateFiltersUI();
+            populateMedicationDropdowns();
+        });
+        categoryFiltersContainer.appendChild(chip);
+    });
+    
+    // Create pharmacy filter chips
+    const pharmacies = getPharmacies();
+    pharmacies.forEach(pharmacy => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'filter-chip';
+        chip.textContent = pharmacy;
+        chip.dataset.pharmacy = pharmacy;
+        chip.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const isActive = this.classList.contains('active');
+            if (isActive) {
+                if (!state.filters.pharmacies.includes(pharmacy)) {
+                    state.filters.pharmacies.push(pharmacy);
+                }
+            } else {
+                const index = state.filters.pharmacies.indexOf(pharmacy);
+                if (index > -1) state.filters.pharmacies.splice(index, 1);
+            }
+            updateFiltersUI();
+            populateMedicationDropdowns();
+        });
+        pharmacyFiltersContainer.appendChild(chip);
+    });
+    
+    // Price range filter
+    if (priceRangeFilter) {
+        priceRangeFilter.addEventListener('change', function() {
+            const value = this.value;
+            if (value === 'all') {
+                state.filters.priceRange = { min: 0, max: Infinity };
+            } else if (value === '500+') {
+                state.filters.priceRange = { min: 500, max: Infinity };
+            } else {
+                const [min, max] = value.split('-').map(Number);
+                state.filters.priceRange = { min, max };
+            }
+            populateMedicationDropdowns();
+            updateFiltersUI();
+        });
+    }
+    
+    // Clear filters button
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            state.filters = { categories: [], pharmacies: [], priceRange: { min: 0, max: Infinity } };
+            document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+            if (priceRangeFilter) priceRangeFilter.value = 'all';
+            populateMedicationDropdowns();
+            updateFiltersUI();
+        });
+    }
+}
+
+// Update filters UI visibility
+function updateFiltersUI() {
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const hasActiveFilters = state.filters.categories.length > 0 || 
+                            state.filters.pharmacies.length > 0 || 
+                            state.filters.priceRange.min > 0 || 
+                            state.filters.priceRange.max < Infinity;
+    if (clearFiltersBtn) {
+        clearFiltersBtn.style.display = hasActiveFilters ? 'block' : 'none';
+    }
+}
+
+// Update initialization
+function initializeAllFeatures() {
+    initializeMedications();
+    setTimeout(() => {
+        initializeFiltersUI();
+        initializeTemplates();
+        initializeBackupRestore();
+        loadCalculationNotes();
+        
+        // Add CSV export button handler
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', exportToCSV);
+        }
+    }, 100);
+}
+
+// Template management
+function initializeTemplates() {
+    const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+    const clearTemplatesBtn = document.getElementById('clearTemplatesBtn');
+    
+    if (saveTemplateBtn) {
+        saveTemplateBtn.addEventListener('click', function() {
+            if (!document.getElementById('amountPaid').value) {
+                showToast('Please fill in form fields before saving template', 'error');
+                return;
+            }
+            const name = prompt('Enter template name:');
+            if (name) {
+                const description = prompt('Enter template description (optional):');
+                const template = {
+                    id: Date.now(),
+                    name: name,
+                    description: description || '',
+                    inputs: {
+                        amountPaid: document.getElementById('amountPaid').value,
+                        medicationDispensed: document.getElementById('medicationDispensed').value,
+                        medicationUnit: document.getElementById('medicationUnit').value || '',
+                        weeksPaid: document.getElementById('weeksPaid').value,
+                        weeksReceived: document.getElementById('weeksReceived').value || 0
+                    },
+                    timestamp: new Date().toISOString()
+                };
+                state.templates.push(template);
+                saveTemplates();
+                showToast('Template saved!', 'success');
+                renderTemplates();
+            }
+        });
+    }
+    
+    if (clearTemplatesBtn) {
+        clearTemplatesBtn.addEventListener('click', function() {
+            if (confirm('Clear all templates?')) {
+                state.templates = [];
+                saveTemplates();
+                renderTemplates();
+            }
+        });
+    }
+    
+    renderTemplates();
+}
+
+function renderTemplates() {
+    const templatesList = document.getElementById('templatesList');
+    const templatesSection = document.getElementById('templatesSection');
+    if (!templatesList || !templatesSection) return;
+    
+    if (state.templates.length === 0) {
+        templatesSection.classList.add('hidden');
+        return;
+    }
+    
+    templatesSection.classList.remove('hidden');
+    templatesList.innerHTML = '';
+    
+    state.templates.forEach(template => {
+        const item = document.createElement('div');
+        item.className = 'template-item';
+        item.innerHTML = `
+            <div class="template-header">
+                <strong>${template.name}</strong>
+                <span class="template-date">${new Date(template.timestamp).toLocaleDateString()}</span>
+            </div>
+            ${template.description ? `<div class="template-description">${template.description}</div>` : ''}
+            <div class="template-actions">
+                <button class="template-btn load" data-id="${template.id}">Load</button>
+                <button class="template-btn delete" data-id="${template.id}">Delete</button>
+            </div>
+        `;
+        
+        item.querySelector('.template-btn.load').addEventListener('click', () => {
+            if (loadTemplate(template.id)) {
+                showToast('Template loaded!', 'success');
+            }
+        });
+        
+        item.querySelector('.template-btn.delete').addEventListener('click', () => {
+            if (confirm('Delete this template?')) {
+                state.templates = state.templates.filter(t => t.id !== template.id);
+                saveTemplates();
+                renderTemplates();
+            }
+        });
+        
+        templatesList.appendChild(item);
+    });
+}
+
+// Backup/Restore
+function initializeBackupRestore() {
+    const exportBackupBtn = document.getElementById('exportBackupBtn');
+    const importBackupBtn = document.getElementById('importBackupBtn');
+    const importBackupFile = document.getElementById('importBackupFile');
+    const currencySelector = document.getElementById('currencySelector');
+    
+    if (exportBackupBtn) {
+        exportBackupBtn.addEventListener('click', exportBackup);
+    }
+    
+    if (importBackupBtn && importBackupFile) {
+        importBackupBtn.addEventListener('click', () => importBackupFile.click());
+        importBackupFile.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                importBackup(this.files[0]);
+                this.value = '';
+            }
+        });
+    }
+    
+    // Currency selector
+    if (currencySelector) {
+        currencySelector.value = state.currency;
+        currencySelector.addEventListener('change', function() {
+            setCurrency(this.value);
+        });
+    }
+}
+
+// Enhanced CSV Export
+function exportToCSV() {
+    if (!state.currentCalculation) return;
+    
+    const calc = state.currentCalculation;
+    const notes = state.calculationNotes[calc.id] || '';
+    const csv = `Refund Converter - Calculation Export
+Date,${new Date(calc.timestamp).toLocaleString()}
+Notes,${notes.replace(/,/g, ';')}
+
+Inputs
+Amount Paid,${calc.inputs.amountPaid}
+Medication Dispensed,${calc.inputs.medicationDispensed}
+Unit,${calc.inputs.medicationUnit}
+Weeks Paid,${calc.inputs.weeksPaid}
+Weeks Received,${calc.inputs.weeksReceived || 0}
+
+Results
+Refund Amount,${calc.results.refund || 0}
+Cost per Week,${calc.results.costPerWeek}
+Cost per Unit,${calc.results.costPerUnit}
+Medication per Week,${calc.results.medicationPerWeek}
+Weekly Cost per Unit,${calc.results.weeklyCostPerUnit}
+
+Projections
+1 Month (4 weeks),${calc.results.costOneMonth}
+3 Months (12 weeks),${calc.results.costThreeMonths}
+6 Months (24 weeks),${calc.results.costSixMonths}
+1 Year (52 weeks),${calc.results.costOneYear}`;
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `refund-calculation-${new Date(calc.timestamp).toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('CSV exported!', 'success');
+}
+
+
+// Load calculation notes on initialization
+function loadCalculationNotes() {
+    try {
+        const saved = localStorage.getItem('calculationNotes');
+        if (saved) {
+            state.calculationNotes = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Error loading notes:', e);
+    }
+}
+

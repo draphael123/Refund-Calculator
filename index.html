@@ -27,6 +27,9 @@
         <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">
             <span class="theme-icon">🌙</span>
         </button>
+        <button id="keyboardShortcutsBtn" class="theme-toggle keyboard-shortcuts-btn" aria-label="Show keyboard shortcuts" title="Keyboard Shortcuts (?)">
+            <span>⌨️</span>
+        </button>
     </div>
     
     <div class="container">
@@ -190,11 +193,42 @@
                     <span class="validation-icon"></span>
                 </div>
                 
+                <div class="medication-filters-section">
+                    <div class="section-header">
+                        <label>
+                            Filter Medications
+                            <span class="tooltip-icon" data-tooltip="Filter medications by category, pharmacy, or price range">ℹ️</span>
+                        </label>
+                        <button type="button" class="clear-filters-btn" id="clearFiltersBtn" style="display: none;">Clear Filters</button>
+                    </div>
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <label>Category:</label>
+                            <div class="filter-chips" id="categoryFilters"></div>
+                        </div>
+                        <div class="filter-group">
+                            <label>Pharmacy:</label>
+                            <div class="filter-chips" id="pharmacyFilters"></div>
+                        </div>
+                        <div class="filter-group">
+                            <label>Price Range:</label>
+                            <select id="priceRangeFilter" class="price-range-filter">
+                                <option value="all">All Prices</option>
+                                <option value="0-50">$0 - $50</option>
+                                <option value="50-100">$50 - $100</option>
+                                <option value="100-200">$100 - $200</option>
+                                <option value="200-500">$200 - $500</option>
+                                <option value="500+">$500+</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="medications-section">
                     <div class="section-header">
                         <label>
                             Medications from Spreadsheet
-                            <span class="tooltip-icon" data-tooltip="Select medications from the spreadsheet to calculate refunds. Click + to add multiple medications.">ℹ️</span>
+                            <span class="tooltip-icon" data-tooltip="Select medications from the spreadsheet to calculate refunds. Click + to add multiple medications. Use filters above to narrow options.">ℹ️</span>
                         </label>
                     </div>
                     <div id="medicationsList" class="medications-list">
@@ -238,6 +272,20 @@
                     </button>
                 </div>
                 
+                <div class="input-group">
+                    <label for="calculationNotes">
+                        Calculation Notes (Optional)
+                        <span class="tooltip-icon" data-tooltip="Add notes or comments about this calculation">ℹ️</span>
+                    </label>
+                    <textarea 
+                        id="calculationNotes" 
+                        name="calculationNotes" 
+                        rows="3"
+                        placeholder="Add any notes about this calculation..."
+                        class="notes-textarea"
+                    ></textarea>
+                </div>
+                
                 <div class="button-group">
                     <button type="submit" class="calculate-btn" id="calculateBtn">
                         <span class="btn-text">Calculate</span>
@@ -248,7 +296,45 @@
                         <span>💡</span> Try Example
                     </button>
                 </div>
+                
+                <div class="utility-buttons">
+                    <button type="button" class="utility-btn" id="saveTemplateBtn" title="Save current inputs as template">
+                        <span>📌</span> Save Template
+                    </button>
+                    <button type="button" class="utility-btn" id="exportBackupBtn" title="Export all data as backup">
+                        <span>💾</span> Backup
+                    </button>
+                    <button type="button" class="utility-btn" id="importBackupBtn" title="Import backup file">
+                        <span>📥</span> Restore
+                    </button>
+                    <select id="currencySelector" class="utility-btn currency-selector" title="Select currency">
+                        <option value="USD">$ USD</option>
+                        <option value="EUR">€ EUR</option>
+                        <option value="GBP">£ GBP</option>
+                        <option value="CAD">C$ CAD</option>
+                        <option value="AUD">A$ AUD</option>
+                        <option value="JPY">¥ JPY</option>
+                        <option value="CNY">¥ CNY</option>
+                        <option value="INR">₹ INR</option>
+                        <option value="BRL">R$ BRL</option>
+                        <option value="MXN">$ MXN</option>
+                    </select>
+                    <input type="file" id="importBackupFile" accept=".json" style="display: none;">
+                </div>
             </form>
+            
+            <div id="resultsSummaryCard" class="results-summary-card hidden" role="region" aria-live="polite" aria-label="Results Summary">
+                <div class="summary-card-content">
+                    <div class="summary-main">
+                        <span class="summary-label">Refund Amount:</span>
+                        <span class="summary-value" id="summaryRefundAmount">$0.00</span>
+                    </div>
+                    <div class="summary-details">
+                        <span id="summaryCostPerWeek"></span>
+                        <span id="summaryWeeksInfo"></span>
+                    </div>
+                </div>
+            </div>
             
             <div id="results" class="results hidden">
                 <div class="results-header">
@@ -256,6 +342,9 @@
                     <div class="results-actions">
                         <button class="action-btn" id="copyBtn" aria-label="Copy results">
                             <span>📋</span> Copy
+                        </button>
+                        <button class="action-btn" id="exportCsvBtn" aria-label="Export to CSV">
+                            <span>📊</span> CSV
                         </button>
                         <button class="action-btn" id="printBtn" aria-label="Print results">
                             <span>🖨️</span> Print
@@ -330,11 +419,20 @@
                 </div>
                 <div id="historyList" class="history-list"></div>
             </div>
+            
+            <div id="templatesSection" class="templates-section hidden">
+                <div class="section-header">
+                    <h3>Saved Templates</h3>
+                    <button class="clear-history-btn" id="clearTemplatesBtn">Clear All</button>
+                </div>
+                <div id="templatesList" class="templates-list"></div>
+            </div>
         </div>
     </div>
     
     <div id="tooltip" class="tooltip hidden"></div>
     <div id="toast" class="toast hidden"></div>
+    <div id="keyboardShortcutsModal" class="modal hidden"></div>
     
     <script src="script.js"></script>
 </body>
