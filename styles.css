@@ -638,7 +638,8 @@ input[type="text"]::placeholder {
 }
 
 .calculate-btn,
-.clear-btn {
+.clear-btn,
+.demo-btn {
     flex: 1;
     padding: 15px;
     border: none;
@@ -698,7 +699,8 @@ input[type="text"]::placeholder {
     cursor: not-allowed;
 }
 
-.clear-btn {
+.clear-btn,
+.demo-btn {
     background: var(--input-bg);
     color: var(--text-primary);
     border: 2px solid var(--border-color);
@@ -706,7 +708,8 @@ input[type="text"]::placeholder {
     overflow: hidden;
 }
 
-.clear-btn::before {
+.clear-btn::before,
+.demo-btn::before {
     content: '';
     position: absolute;
     top: 0;
@@ -717,7 +720,8 @@ input[type="text"]::placeholder {
     transition: left 0.4s;
 }
 
-.clear-btn:hover::before {
+.clear-btn:hover::before,
+.demo-btn:hover::before {
     left: 100%;
 }
 
@@ -726,6 +730,27 @@ input[type="text"]::placeholder {
     border-color: var(--text-secondary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.demo-btn {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+    border-color: rgba(255, 193, 7, 0.4);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.demo-btn:hover {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 152, 0, 0.2) 100%);
+    border-color: rgba(255, 193, 7, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+}
+
+.demo-btn span {
+    font-size: 1.1rem;
 }
 
 .btn-loader {

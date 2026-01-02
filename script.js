@@ -213,30 +213,58 @@ function validateInput(input) {
     
     if (input.hasAttribute('required') && input.value.trim() === '') {
         isValid = false;
-        errorMessage = 'This field is required';
+        if (input.id === 'amountPaid') {
+            errorMessage = 'Please enter the amount paid (e.g., 100.00)';
+        } else if (input.id === 'medicationDispensed') {
+            errorMessage = 'Please enter the medication amount (e.g., 50mg or 50)';
+        } else if (input.id === 'weeksPaid') {
+            errorMessage = 'Please enter the number of weeks paid (e.g., 12)';
+        } else if (input.id === 'weeksReceived') {
+            errorMessage = 'Please enter the number of weeks received (e.g., 8)';
+        } else {
+            errorMessage = 'This field is required';
+        }
     } else if (input.id === 'amountPaid') {
         const value = parseFloat(input.value);
-        if (isNaN(value) || value < 0) {
+        if (isNaN(value)) {
             isValid = false;
-            errorMessage = 'Please enter a valid positive number';
+            errorMessage = 'Please enter a valid number (e.g., 100.00 or 100)';
+        } else if (value < 0) {
+            isValid = false;
+            errorMessage = 'Amount must be greater than or equal to $0.00';
+        } else if (value === 0) {
+            isValid = false;
+            errorMessage = 'Amount must be greater than $0.00';
         }
     } else if (input.id === 'medicationDispensed') {
         const value = extractNumber(input.value);
-        if (isNaN(value) || value <= 0) {
+        if (isNaN(value)) {
             isValid = false;
-            errorMessage = 'Please enter a valid medication amount (e.g., 100mg or 100)';
+            errorMessage = 'Please enter a valid amount (e.g., 100mg, 50ml, or just 100)';
+        } else if (value <= 0) {
+            isValid = false;
+            errorMessage = 'Medication amount must be greater than 0';
         }
     } else if (input.id === 'weeksPaid') {
         const value = extractNumber(input.value);
-        if (isNaN(value) || value <= 0) {
+        if (isNaN(value)) {
             isValid = false;
-            errorMessage = 'Please enter a valid number of weeks (e.g., 4 weeks or 4)';
+            errorMessage = 'Please enter a valid number (e.g., 12, "12 weeks", or "12w")';
+        } else if (value <= 0) {
+            isValid = false;
+            errorMessage = 'Weeks paid must be greater than 0';
+        } else if (value > 520) {
+            isValid = false;
+            errorMessage = 'Please enter a reasonable number of weeks (max 520 weeks / 10 years)';
         }
     } else if (input.id === 'weeksReceived') {
         const value = extractNumber(input.value);
-        if (isNaN(value) || value < 0) {
+        if (isNaN(value) && input.value.trim() !== '') {
             isValid = false;
-            errorMessage = 'Please enter a valid number of weeks (e.g., 4 weeks or 4)';
+            errorMessage = 'Please enter a valid number (e.g., 8, "8 weeks", or "8w")';
+        } else if (value < 0) {
+            isValid = false;
+            errorMessage = 'Weeks received cannot be negative';
         }
     }
     
@@ -272,9 +300,13 @@ function clearError(input) {
 function initializeForm() {
     const form = document.getElementById('calculatorForm');
     const clearBtn = document.getElementById('clearBtn');
+    const demoBtn = document.getElementById('demoBtn');
     
     form.addEventListener('submit', handleSubmit);
     clearBtn.addEventListener('click', clearForm);
+    if (demoBtn) {
+        demoBtn.addEventListener('click', loadExampleData);
+    }
 }
 
 function handleSubmit(e) {
@@ -444,6 +476,28 @@ function displayResults(results) {
     setTimeout(() => {
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
+}
+
+function loadExampleData() {
+    // Clear form first
+    clearForm();
+    
+    // Populate with example data
+    document.getElementById('amountPaid').value = '250.00';
+    document.getElementById('medicationDispensed').value = '100mg';
+    document.getElementById('medicationUnit').value = 'mg';
+    document.getElementById('weeksPaid').value = '12';
+    document.getElementById('weeksReceived').value = '8';
+    
+    // Validate all inputs
+    document.querySelectorAll('input[required]').forEach(input => {
+        validateInput(input);
+    });
+    
+    showToast('Example data loaded! Click Calculate to see results.', 'success');
+    
+    // Scroll to form
+    document.getElementById('calculatorForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearForm() {
