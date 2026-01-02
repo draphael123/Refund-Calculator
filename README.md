@@ -1,6 +1,6 @@
-# Medication Payment Calculator
+# Refund Converter
 
-A web-based calculator for calculating medication payment costs and refunds.
+A web-based tool to process accurate refunds for patients who are due them. Calculate refund amounts for assessment fees, expanded labs, Getlabs fees, and subscription fees.
 
 ## Features
 

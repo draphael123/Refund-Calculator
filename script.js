@@ -77,6 +77,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', function() {
     loadMedicationsFromStorage();
     initializeTheme();
+    initializeInstructions();
     initializeTooltips();
     initializeValidation();
     initializeForm();
@@ -93,6 +94,40 @@ function initializeTheme() {
     updateThemeIcon(savedTheme);
     
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+}
+
+// Instructions Management
+function initializeInstructions() {
+    const toggle = document.getElementById('instructionsToggle');
+    const content = document.getElementById('instructionsContent');
+    
+    if (!toggle || !content) return;
+    
+    // Check if user has preference saved
+    const savedState = localStorage.getItem('instructionsExpanded');
+    const shouldExpand = savedState === 'true';
+    
+    if (shouldExpand) {
+        content.classList.add('expanded');
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.querySelector('.instructions-toggle-text').textContent = 'Hide Instructions';
+    }
+    
+    toggle.addEventListener('click', function() {
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        const newState = !isExpanded;
+        
+        toggle.setAttribute('aria-expanded', newState.toString());
+        toggle.querySelector('.instructions-toggle-text').textContent = newState ? 'Hide Instructions' : 'Show Instructions';
+        
+        if (newState) {
+            content.classList.add('expanded');
+            localStorage.setItem('instructionsExpanded', 'true');
+        } else {
+            content.classList.remove('expanded');
+            localStorage.setItem('instructionsExpanded', 'false');
+        }
+    });
 }
 
 function toggleTheme() {
@@ -765,7 +800,7 @@ document.getElementById('copyBtn').addEventListener('click', function() {
     if (!state.currentCalculation) return;
     
     const results = state.currentCalculation.results;
-    const text = `Medication Payment Calculator Results
+    const text = `Refund Converter Results
 
 Inputs:
 - Amount Paid: ${formatCurrency(state.currentCalculation.inputs.amountPaid)}
@@ -805,8 +840,8 @@ document.getElementById('shareBtn').addEventListener('click', function() {
     if (!state.currentCalculation) return;
     
     const shareData = {
-        title: 'Medication Payment Calculator Results',
-        text: `Check out my medication cost calculation!`,
+        title: 'Refund Converter Results',
+        text: `Check out my refund calculation!`,
         url: window.location.href
     };
     

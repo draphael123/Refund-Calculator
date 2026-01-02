@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Calculate medication payment costs, weekly expenses, and medication breakdown. Free online calculator for medication cost analysis.">
-    <meta name="keywords" content="medication calculator, payment calculator, medication cost, healthcare calculator">
-    <meta name="author" content="Medication Payment Calculator">
+    <meta name="description" content="Process accurate refunds for patients who are due them. Calculate refund amounts for assessment fees, expanded labs, Getlabs fees, and subscription fees.">
+    <meta name="keywords" content="refund calculator, patient refunds, healthcare refunds, refund converter, assessment fee refunds">
+    <meta name="author" content="Refund Converter">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Medication Payment Calculator">
-    <meta property="og:description" content="Calculate your medication costs and payment breakdown">
+    <meta property="og:title" content="Refund Converter - Accurate Patient Refund Calculator">
+    <meta property="og:description" content="Process accurate refunds for patients who are due them. Calculate refund amounts quickly and easily.">
     <meta property="og:url" content="https://refund-calculator-3jaa1o9z4-daniel-8982s-projects.vercel.app">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="Medication Payment Calculator">
-    <meta property="twitter:description" content="Calculate your medication costs and payment breakdown">
+    <meta property="twitter:title" content="Refund Converter - Accurate Patient Refund Calculator">
+    <meta property="twitter:description" content="Process accurate refunds for patients who are due them. Calculate refund amounts quickly and easily.">
     
-    <title>Medication Payment Calculator - Free Online Calculator</title>
+    <title>Refund Converter - Accurate Patient Refund Calculator</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
@@ -31,8 +31,79 @@
     
     <div class="container">
         <div class="calculator-card">
-            <h1>Medication Payment Calculator</h1>
-            <p class="subtitle">Calculate your medication costs and payment breakdown</p>
+            <h1>Refund Converter</h1>
+            <p class="subtitle">Process accurate refunds for patients who are due them</p>
+            
+            <div class="refund-notice">
+                <div class="refund-notice-icon">ℹ️</div>
+                <div class="refund-notice-content">
+                    <strong>Refund Eligibility:</strong>
+                    <ul>
+                        <li><strong>Assessment Fees:</strong> Patients can always get refunds for their assessment fee</li>
+                        <li><strong>Expanded Labs, Getlabs Fees, and Subscription Fees:</strong> Refunds are more complicated and depend on specific circumstances</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="instructions-section">
+                <button type="button" class="instructions-toggle" id="instructionsToggle" aria-expanded="false" aria-controls="instructionsContent">
+                    <span class="instructions-icon">📖</span>
+                    <span class="instructions-toggle-text">Show Instructions</span>
+                    <span class="instructions-arrow">▼</span>
+                </button>
+                <div class="instructions-content" id="instructionsContent">
+                    <div class="instructions-body">
+                        <h3>How to Use</h3>
+                        <ol>
+                            <li><strong>Enter the Amount Paid:</strong> Enter the total amount paid (e.g., 100.00).</li>
+                            <li><strong>Enter Medication/Service Dispensed:</strong> Enter the amount of medication or service received. You can include units (e.g., "100mg", "50ml") or just the number (e.g., "100"). The calculator will automatically detect the amount.</li>
+                            <li><strong>Enter Weeks Paid:</strong> Enter the number of weeks you paid for (e.g., "12" or "12 weeks").</li>
+                            <li><strong>Enter Weeks Received:</strong> Enter the number of weeks of medication/service you actually received. If you received the full amount, enter the same as "Weeks Paid".</li>
+                            <li><strong>Click Calculate:</strong> Click the "Calculate" button to see your results, including the refund amount.</li>
+                        </ol>
+                        
+                        <h3>Using the Medication List</h3>
+                        <p>You can also select medications from the predefined list below the main form:</p>
+                        <ul>
+                            <li>Click "Add Medication" to select from the list of available medications</li>
+                            <li>After selecting a medication, you'll see the pre-filled details</li>
+                            <li>Adjust the "Weeks Received" field for each medication to calculate refunds</li>
+                            <li>You can add multiple medications and see a total refund amount</li>
+                        </ul>
+                        
+                        <h3>How Refunds Are Calculated</h3>
+                        <div class="formula-box">
+                            <strong>Refund Formula:</strong>
+                            <div class="formula">Refund = (Weeks Paid - Weeks Received) × Cost per Week</div>
+                            <p><em>Note: If weeks received is equal to or greater than weeks paid, the refund will be $0.00 (full medication received).</em></p>
+                        </div>
+                        
+                        <h3>Understanding the Results</h3>
+                        <ul>
+                            <li><strong>Cost per Week:</strong> The amount you paid divided by the number of weeks</li>
+                            <li><strong>Cost per Unit:</strong> The amount you paid divided by the medication amount</li>
+                            <li><strong>Medication per Week:</strong> How much medication you receive each week</li>
+                            <li><strong>Weekly Cost per Unit:</strong> The cost per unit per week</li>
+                            <li><strong>Refund Amount:</strong> The amount you should receive back if you didn't receive the full medication supply</li>
+                        </ul>
+                        
+                        <h3>Keyboard Shortcuts</h3>
+                        <ul>
+                            <li><kbd>Enter</kbd> - Submit the form (when all fields are valid)</li>
+                            <li><kbd>Esc</kbd> - Clear focus from current input field</li>
+                        </ul>
+                        
+                        <h3>Tips</h3>
+                        <ul>
+                            <li>You can use formats like "4 weeks", "4w", or just "4" for week fields</li>
+                            <li>The calculator remembers your recent calculations - check the history section below</li>
+                            <li>Use the medication dropdown to quickly select from common medications</li>
+                            <li>Click the tooltip icons (ℹ️) next to each field for additional help</li>
+                            <li>Results can be copied, printed, or shared using the action buttons</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             
             <form id="calculatorForm" novalidate>
                 <div class="input-group">
